@@ -1,0 +1,4 @@
+../Core/Src/stm32f407x_flash.c:12:17:GetSector	24	static
+../Core/Src/stm32f407x_flash.c:75:10:flashWriteApp	40	static
+../Core/Src/stm32f407x_flash.c:104:6:flashReadData	24	static
+../Core/Src/stm32f407x_flash.c:115:10:flashEraseAppSectors	16	static

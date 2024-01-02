@@ -1,0 +1,125 @@
+#include <CAN.h>
+#include <Arduino.h>
+
+#define CAN_IDX_BYTES 2
+#define CAN_DATA_BYTES 6
+#define STM_CAN_ID 0x111
+
+enum FLASH_STATUS
+{
+  NOT_STARTED,
+  IN_PROGRESS,
+  FINISHED
+};
+
+uint32_t idx = 0;
+uint32_t fileLength;
+enum FLASH_STATUS flashStatus = NOT_STARTED;
+
+
+
+void onReceive(int packetSize);
+
+void setup()
+{
+  Serial.begin(115200);
+  while (!Serial)
+    ;
+
+  Serial.println("CAN Sender");
+
+  CAN.setClockFrequency(8E6);
+
+  // start the CAN bus at 500 kbps
+  if (!CAN.begin(1000E3))
+  {
+    Serial.println("Starting CAN failed!");
+    while (1);
+  }
+
+  CAN.onReceive(onReceive);
+
+  // Wait for first 8 bytes of data
+  while (Serial.available() < 8);
+
+  // Read first 8 bytes of data, telling us the file length
+  uint8_t lengthBytes[8];
+  for (int i = 0; i < 8; i++)
+  {
+    uint8_t byte = Serial.read();
+    lengthBytes[i] = byte;
+    fileLength <<= 8;
+    fileLength += byte;
+  }
+
+  // Serial.print("File length: ");
+  // Serial.println(fileLength);
+
+  // send file length as first packet
+  CAN.beginPacket(0x123);
+  CAN.write(lengthBytes, 8);
+  CAN.endPacket();
+
+  // Wait for ready signal
+  while (flashStatus != NOT_STARTED);
+
+  // send length back over serial to start sending data
+  for (int i = 0; i < 8; i++) {
+    Serial.print(lengthBytes[i], HEX);
+  }
+}
+
+void loop()
+{   
+  // Wait for 6 bytes of data or until we run out of file
+  uint8_t bytesToRead = min(CAN_DATA_BYTES, fileLength);
+  if (fileLength > 0 && Serial.available() >= bytesToRead)
+  {
+    uint8_t data[bytesToRead];
+    for (uint8_t i = 0; i < bytesToRead; i++)
+    {
+      uint8_t byte = Serial.read();
+      data[i] = byte;
+    }
+
+    Serial.print("Sending packet ");
+    Serial.print(idx);
+    Serial.print(" ");
+    for (uint8_t i = 0; i < bytesToRead; i++)
+    {
+      Serial.print(data[i], HEX);
+      Serial.print(" ");
+    }
+
+    Serial.println();
+
+    CAN.beginPacket(0x123);
+
+    // Write the index (little endian)
+    for (int i = CAN_IDX_BYTES - 1; i >= 0; i--)
+    {
+      CAN.write((uint8_t *)&idx + i, 1);
+    }
+    CAN.write(data, bytesToRead);
+    CAN.endPacket();
+
+    idx++;
+    fileLength -= bytesToRead;
+  } else {
+    // Serial.println("done.");
+  }
+
+}
+
+void onReceive(int packetSize)
+{
+  if (CAN.packetId() == STM_CAN_ID) {
+    uint8_t rxData[packetSize];
+    for (uint8_t i = 0; i < packetSize; i++)
+    {
+      rxData[i] = CAN.read();
+    }
+
+    flashStatus = (FLASH_STATUS)rxData[0];
+  }
+}

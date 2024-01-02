@@ -1,0 +1,24 @@
+{
+    "name": "BMP attach",
+    "cwd": "${workspaceRoot}",
+    "executable": "${workspaceRoot}/build/blink2.elf",
+    "request": "attach",    // "launch" also works perhaps
+    "type": "cortex-debug",
+    "servertype": "bmp",
+    "interface": "swd",
+    "device": "STM32F103",
+    "BMPGDBSerialPort": "/dev/cu.usbmodem4C99B0AB1",  // Use whatever serial port makes sense for your OS and BMP setup
+},
+{
+    "name": "BMP Debug",
+    "cwd": "${workspaceRoot}",
+    "executable": "${workspaceRoot}/build/blink2.elf",
+    "request": "launch",    
+    "preLaunchTask": "Build STM",
+    "type": "cortex-debug",
+    "servertype": "bmp",
+    "interface": "swd",
+    "device": "STM32F103",
+    "BMPGDBSerialPort": "/dev/cu.usbmodem4C99B0AB1",  // Use whatever serial port makes sense for your OS and BMP setup
+    "runToEntryPoint": "main"
+}
